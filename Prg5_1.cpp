@@ -65,7 +65,7 @@ int	   saveRack = 0;			// Счетчик выбитых шаров
 Ball* pCueBall = nullptr;	// Указатель на белый шар (в списке от тоже есть)
 
 
-std::vector<GraphicalObject*> listOfObject{};
+std::vector<GraphicalObject*> vectorOfObject{};
 
 // ********************************************************************************
 //   Определения классов
@@ -344,13 +344,8 @@ Ball::Ball(int x, int y, bool fc, RedGreenBlue rgb_) :
 
 void Ball::Draw() const
 {
-	// Шар рисуется вписанным в область region либо белым, либо синим цветом.
-	// Белым цветом рисуется шар, у которого установлен флаг fCue. 
-
-	if (IsCue())
-		glColor3ub(255, 255, 255);	// Белый цвет
-	else
-		glColor3ub(rgb.GetRed(), rgb.GetGreen(), rgb.GetBlue()); // другой цвет
+	// Шар рисуется вписанным в область region
+	glColor3ub(rgb.GetRed(), rgb.GetGreen(), rgb.GetBlue());
 
 	glPointSize(static_cast<float>(region.Width()));
 	glEnable(GL_POINT_SMOOTH);
@@ -394,7 +389,7 @@ void Ball::Update()
 	int dy = static_cast<int>(2.0 * sqrt(energy) * sin(direction));
 	region.OffsetRect(dx, dy);
 
-	for (auto& bptr : listOfObject)
+	for (auto& bptr : vectorOfObject)
 	{
 		if (bptr != this)
 		{
@@ -472,6 +467,12 @@ RedGreenBlue ChooseRedGreenBlue(int count)
 	}
 }
 
+void PushpCueBallToVecGraphicalObject()
+{
+	vectorOfObject.push_back(new Ball(50, 108, true, RedGreenBlue(255, 255, 255)));
+	pCueBall = dynamic_cast<Ball*>(vectorOfObject[vectorOfObject.size() - 1]);
+}
+
 // Функция для инициализации глобальных переменных.
 void CreateGlobals()
 {
@@ -480,35 +481,38 @@ void CreateGlobals()
 	// Создание шаров. 
 
 	// Сначала создается белый шар, а затем 15 синих. В связном
-	// списке белый шар располагается последним.
-	RedGreenBlue rgb = RedGreenBlue(0, 0, 255);
+	// списке белый шар располагается последним.	
 	int count = 0;
-	listOfObject.push_back(new Ball(50, 108, true, rgb));
-	pCueBall = dynamic_cast<Ball*>(listOfObject[0]);
 	for (int i = 1; i <= 5; i++)
 		for (int j = 1; j <= i; j++)
 		{
-			rgb = ChooseRedGreenBlue(count);
-			listOfObject.push_back(new Ball(190 + i * 8, 100 + 16 * j - 8 * i, false, rgb));
+			vectorOfObject.push_back(new Ball(190 + i * 8, 100 + 16 * j - 8 * i, false, ChooseRedGreenBlue(count)));
 			++count;
 		}
-
+	PushpCueBallToVecGraphicalObject();
 
 	// Создание стенок
-	listOfObject.push_back(new Wall(10, 10, 300, 15, 0.0));
-	listOfObject.push_back(new Wall(10, 200, 300, 205, 0.0));
-	listOfObject.push_back(new Wall(10, 10, 15, 200, PI));
-	listOfObject.push_back(new Wall(300, 10, 305, 205, PI));
+	vectorOfObject.push_back(new Wall(10, 10, 300, 15, 0.0));
+	vectorOfObject.push_back(new Wall(10, 200, 300, 205, 0.0));
+	vectorOfObject.push_back(new Wall(10, 10, 15, 200, PI));
+	vectorOfObject.push_back(new Wall(300, 10, 305, 205, PI));
 
 	// Создание луз
-	listOfObject.push_back(new Hole(15, 15));
-	listOfObject.push_back(new Hole(15, 200));
-	listOfObject.push_back(new Hole(300, 15));
-	listOfObject.push_back(new Hole(300, 200));
-	listOfObject.push_back(new Hole(157, 15));
-	listOfObject.push_back(new Hole(157, 200));
+	vectorOfObject.push_back(new Hole(15, 15));
+	vectorOfObject.push_back(new Hole(15, 200));
+	vectorOfObject.push_back(new Hole(300, 15));
+	vectorOfObject.push_back(new Hole(300, 200));
+	vectorOfObject.push_back(new Hole(157, 15));
+	vectorOfObject.push_back(new Hole(157, 200));
 }
 
+void DeleteGlobals()
+{
+	for (int i = vectorOfObject.size() - 1; i >= 0; --i)
+	{
+		vectorOfObject.pop_back();
+	}
+}
 
 
 // ********************************************************************************
@@ -544,9 +548,8 @@ void CALLBACK Display()
 	// Очистка буфера в памяти (он используется для отрисовки сцены)
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	const GraphicalObject* pObj = listOfObject[0];
-
-	for (auto& pObj : listOfObject)
+	const GraphicalObject* pObj = pCueBall;
+	for (auto& pObj : vectorOfObject)
 	{
 		pObj->Draw();
 	}
@@ -568,9 +571,8 @@ void CALLBACK Idle()
 	// Обновление положения шаров
 	fBallMoved = false;
 
-	GraphicalObject* bptr = listOfObject[0];
-
-	for (auto& bptr : listOfObject)
+	GraphicalObject* bptr =  pCueBall;
+	for (auto& bptr : vectorOfObject)
 	{
 		bptr->Update();
 	}
@@ -615,6 +617,7 @@ int main()
 	// раз, когда потребуется перерисовать окно на экране (например, когда 
 	// окно будет развернуто на весь экран)
 	auxMainLoop(Display);
+	DeleteGlobals();
 
 	return 0;
 }
